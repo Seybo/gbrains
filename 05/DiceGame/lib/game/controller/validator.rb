@@ -4,11 +4,13 @@ module DiceGame
 
     private
 
-    def invalid?(*args)
+    def invalid?(validator, params = {})
       clear_error!
 
-      args.each do |validator_name|
-        send "check_#{validator_name}"
+      if params.empty?
+        send "check_#{validator}"
+      else
+        send "check_#{validator}", params
       end
 
       @error.nil? ? false : true
@@ -32,17 +34,13 @@ module DiceGame
       end
     end
 
-    def check_bet
-      @error = 'Not enough credits' if @player.current_balance < @amount
-      @error = 'Wrong bet amount' if @amount <= 0
-      @error = 'Wrong score' unless
-        (game.dice..game.dice * game.sides).cover? @score
-    end
+    def check_bet(params)
+      g = params[:game]
+      p = params[:player]
 
-    private
-
-    def game
-      @player.game
+      @error = 'Not enough credits' if p.current_balance < p.bet.amount
+      @error = 'Wrong bet amount' if p.bet.amount <= 0
+      @error = 'Wrong score' unless (g.dice..g.dice * g.sides).cover? p.bet.score
     end
   end
 end

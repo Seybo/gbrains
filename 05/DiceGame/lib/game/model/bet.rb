@@ -2,14 +2,11 @@ module DiceGame
   class Bet
     include Validator
 
-    attr_reader :player, :score, :amount
+    attr_reader :score, :amount
 
-    def initialize(player, score, amount)
-      @player = player
+    def initialize(score, amount)
       @score = score
       @amount = amount
-
-      raise @error if invalid? :bet
     end
   end
 end

@@ -1,25 +1,27 @@
-require_relative 'validator.rb'
+require_relative 'validator'
 
 module DiceGame
-  class Game
+  class Gameplay
     include Validator
 
-    attr_accessor :players, :dice_result
-    attr_reader :dice, :sides, :winners_percent
+    attr_accessor :players, :dice_values, :dice_result
+    attr_reader :game
 
-    def initialize(dice: 2, sides: 6, percent: 25)
-      @dice = dice
-      @sides = sides
-      @winners_percent = percent
+    def initialize(dice:, sides:, percent:)
+      @game = Game.new(dice, sides, percent)
       @players = []
-
-      raise @error if invalid? :game_settings
-
-      log("Game started with #{dice.to_words.capitalize} #{sides}-sided dice")
     end
 
-    def add_player(player)
-      @players << player
+    def add_player(balance:, name:)
+      @players << Player.new(balance, name)
+      @players.last
+    end
+
+    def make_bet(player:, score:, amount:)
+      player.bet = Bet.new(score, amount)
+      raise @error if invalid? :bet, game: game, player: player
+
+      log("#{player.name} bet #{amount} on #{score}")
     end
 
     def turn
@@ -33,6 +35,8 @@ module DiceGame
     end
 
     def finish
+      puts ''
+      puts '======== THE END ========='
       @players.each do |player|
         log "#{player.name}: #{game_results_for(player)}"
       end
@@ -43,7 +47,7 @@ module DiceGame
 
     def throw_dice
       dice_values = []
-      @dice.times { dice_values << Dice.new(@sides).score }
+      game.dice.times { dice_values << Dice.new(game.sides).score }
       @dice_result = dice_result_for(dice_values)
       log "Dice throw result: #{@dice_result}"
     end
@@ -59,7 +63,21 @@ module DiceGame
     end
 
     def update_balance!
-      @players.each(&:update_balance!)
+      @players.each do |player|
+        amount = calculate_amount_for(player)
+        player.update_balance!(amount)
+      end
+    end
+
+    def calculate_amount_for(player)
+      win_amount = player.bet.amount * game.winners_percent.to_f / 100
+      loose_amount = -player.bet.amount
+
+      won_this_turn?(player) ? win_amount : loose_amount
+    end
+
+    def won_this_turn?(player)
+      player.bet.score == @dice_result
     end
 
     def clear_bets!
